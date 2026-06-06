@@ -206,6 +206,21 @@ input[type=date].search-bar-date {
 .search-bar-btn:hover{background:#1a5fb8;box-shadow:0 4px 18px rgba(40,114,204,.35)}
 .search-bar-btn:disabled{opacity:.5;cursor:not-allowed}
 
+/* ── Date dropdown ── */
+.search-bar-date-dropdown{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  z-index:9999;
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.14);
+  padding:20px;
+  min-width:280px;
+  border:1px solid #e8e8e8;
+  cursor:default;
+}
+
 /* ── Guest dropdown ── */
 .guest-dropdown{
   display:none;
@@ -656,6 +671,8 @@ input:focus,select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,4
   .search-bar-field--dest,.search-bar-field--dates{flex:auto}
   .search-bar-field--guests{border-bottom:none;flex:auto}
   .search-bar-btn{border-radius:10px;padding:14px 20px;margin:8px 12px 12px;width:calc(100% - 24px);display:flex;align-items:center;justify-content:center;min-height:auto;font-size:15px;align-self:auto}
+  .guest-dropdown{left:0;right:0;min-width:0;border-radius:0 0 12px 12px;max-height:60vh;overflow-y:auto}
+  .search-bar-date-dropdown{left:0;right:0;min-width:0;border-radius:0 0 12px 12px}
   .hotel-card-inner{flex-direction:column;min-height:auto;max-height:none}
   .hotel-img{width:100%;height:180px}
   .hotel-body{flex-direction:column;gap:8px;padding:14px 16px}

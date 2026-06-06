@@ -13,30 +13,15 @@ const LIMITS = { adults: { min: 1, max: 6 }, children: { min: 0, max: 9 }, rooms
 
 export function GuestSelector({ value, onChange }: { value: GuestConfig; onChange: (v: GuestConfig) => void }) {
   const [open, setOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  useEffect(() => {
-    if (!isMobile) {
-      function handle(e: MouseEvent) {
-        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-      }
-      document.addEventListener('click', handle)
-      return () => document.removeEventListener('click', handle)
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-  }, [isMobile])
-
-  useEffect(() => {
-    document.body.style.overflow = open && isMobile ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open, isMobile])
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
 
   function step(field: 'adults' | 'children' | 'rooms', dir: number) {
     const lim = LIMITS[field]
@@ -110,26 +95,9 @@ export function GuestSelector({ value, onChange }: { value: GuestConfig; onChang
         </svg>
       </div>
 
-      {/* Desktop dropdown */}
-      {open && !isMobile && (
+      {open && (
         <div className="guest-dropdown open" onClick={e => e.stopPropagation()}>
           {dropdownContent}
-        </div>
-      )}
-
-      {/* Mobile bottom sheet */}
-      {open && isMobile && (
-        <div className="mobile-sheet-overlay" onClick={() => setOpen(false)}>
-          <div className="mobile-sheet" onClick={e => e.stopPropagation()}>
-            <div className="mobile-sheet-handle-bar"><div className="mobile-sheet-handle" /></div>
-            <div className="mobile-sheet-header">
-              <span className="mobile-sheet-title">Guests &amp; Rooms</span>
-              <button className="mobile-sheet-close" onClick={() => setOpen(false)}>✕</button>
-            </div>
-            <div className="mobile-sheet-body">
-              {dropdownContent}
-            </div>
-          </div>
         </div>
       )}
     </div>

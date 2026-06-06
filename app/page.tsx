@@ -64,30 +64,15 @@ function DateRangeField({ checkin, checkout, onCheckinChange, onCheckoutChange }
   onCheckinChange: (v: string) => void; onCheckoutChange: (v: string) => void
 }) {
   const [open, setOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  useEffect(() => {
-    if (!isMobile) {
-      function handler(e: MouseEvent) {
-        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-      }
-      document.addEventListener('mousedown', handler)
-      return () => document.removeEventListener('mousedown', handler)
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-  }, [isMobile])
-
-  useEffect(() => {
-    document.body.style.overflow = open && isMobile ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open, isMobile])
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const label = checkin && checkout
     ? `${fmtDateDisplay(checkin)} - ${fmtDateDisplay(checkout)}`
@@ -139,28 +124,9 @@ function DateRangeField({ checkin, checkout, onCheckinChange, onCheckoutChange }
         </span>
       </div>
 
-      {open && !isMobile && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 9999,
-          background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,.14)',
-          padding: 20, minWidth: 280, border: '1px solid #e8e8e8',
-        }} onClick={e => e.stopPropagation()}>
+      {open && (
+        <div className="search-bar-date-dropdown" onClick={e => e.stopPropagation()}>
           {dateInputs}
-        </div>
-      )}
-
-      {open && isMobile && (
-        <div className="mobile-sheet-overlay" onClick={() => setOpen(false)}>
-          <div className="mobile-sheet" onClick={e => e.stopPropagation()}>
-            <div className="mobile-sheet-handle-bar"><div className="mobile-sheet-handle" /></div>
-            <div className="mobile-sheet-header">
-              <span className="mobile-sheet-title">Select Dates</span>
-              <button className="mobile-sheet-close" onClick={() => setOpen(false)}>✕</button>
-            </div>
-            <div className="mobile-sheet-body">
-              {dateInputs}
-            </div>
-          </div>
         </div>
       )}
     </div>
