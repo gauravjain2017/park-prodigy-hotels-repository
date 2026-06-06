@@ -394,7 +394,7 @@ input:focus,select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,4
 .no-rates-text{font-size:13px;color:var(--g300)}
 
 /* ── Park Prodigy Recommended ── */
-.recommended-section{margin-bottom:8px}
+.recommended-section{margin-bottom:8px; padding: 12px; }
 .recommended-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
 .recommended-badge{background:#1B2B4B;color:#fff;font-size:13px;font-weight:700;padding:6px 16px;border-radius:20px}
 .recommended-sub{font-size:13px;color:#8a897f;margin:0}
