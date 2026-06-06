@@ -5,7 +5,7 @@ import { DESTINATIONS, SecondaryFilters, getSortedHotels, applySecondaryFilters,
 
 const AMENITY_DEFS = [
   { id: 'refundable', l: 'Refundable', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> },
-  { id: 'pool', l: 'Pool', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg> },
+  { id: 'pool', l: 'Pool', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3-2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg> },
   { id: 'parking', l: 'Parking', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 17V7h5a3 3 0 0 1 0 6H9"/></svg> },
   { id: 'breakfast', l: 'Breakfast', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/></svg> },
   { id: 'wifi', l: 'Wi-Fi', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> },
@@ -59,12 +59,10 @@ export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort
   function openMobile() {
     setMobileFilters({ ...filters, amenities: new Set(filters.amenities) })
     setMobileOpen(true)
-    document.body.style.overflow = 'hidden'
   }
 
   function closeMobile() {
     setMobileOpen(false)
-    document.body.style.overflow = ''
   }
 
   function applyMobile() {
@@ -178,40 +176,23 @@ export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort
 
       {/* ── Mobile filter bar (visible only on ≤768px) ── */}
       <div className="mobile-filter-bar">
-        <div className="mfb-action-row">
-          <button
-            className={`mfb-filters-btn${activeFilterCount > 0 ? ' mfb-filters-btn--active' : ''}`}
-            onClick={openMobile}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
-            </svg>
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="mfb-fbadge">{activeFilterCount}</span>
-            )}
-          </button>
-        </div>
-        <div className="mfb-count-bar">
-          <span className="mfb-count-chip">
-            <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="currentColor"/></svg>
-            {' '}{filtered.length} hotel{filtered.length !== 1 ? 's' : ''}
-          </span>
-          <div className="mfb-count-progress">
-            <div className="mfb-count-fill" style={{ width: `${progressPct}%` }} />
+        {!mobileOpen ? (
+          <div className="mfb-action-row">
+            <button
+              className={`mfb-filters-btn${activeFilterCount > 0 ? ' mfb-filters-btn--active' : ''}`}
+              onClick={openMobile}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+              </svg>
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="mfb-fbadge">{activeFilterCount}</span>
+              )}
+            </button>
           </div>
-          <span className="mfb-count-total">{countLabel}</span>
-        </div>
-      </div>
-
-      {/* ── Mobile filter bottom drawer ── */}
-      {mobileOpen && (
-        <div
-          className="mfd-overlay mfd-open"
-          onClick={e => { if (e.target === e.currentTarget) closeMobile() }}
-        >
-          <div className="mfd-sheet">
-            <div className="mfd-handle-bar"><div className="mfd-handle" /></div>
+        ) : (
+          <div className="mfd-inline">
             <div className="mfd-header">
               <span className="mfd-title">Filters</span>
               <button className="mfd-close" onClick={closeMobile}>✕</button>
@@ -288,8 +269,19 @@ export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort
               <button className="mfd-btn-apply" onClick={applyMobile}>Show results</button>
             </div>
           </div>
+        )}
+
+        <div className="mfb-count-bar">
+          <span className="mfb-count-chip">
+            <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="currentColor"/></svg>
+            {' '}{filtered.length} hotel{filtered.length !== 1 ? 's' : ''}
+          </span>
+          <div className="mfb-count-progress">
+            <div className="mfb-count-fill" style={{ width: `${progressPct}%` }} />
+          </div>
+          <span className="mfb-count-total">{countLabel}</span>
         </div>
-      )}
+      </div>
     </>
   )
 }
