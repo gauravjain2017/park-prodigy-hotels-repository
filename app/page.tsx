@@ -7,10 +7,23 @@ import {
   getNights,
   applySecondaryFilters, getSortedHotels, applyHotelFilter,
   DEFAULT_FILTERS, SecondaryFilters,
+  getRecommendedIndex,
 } from '@/lib/hotels'
 import { GuestSelector, GuestConfig } from '@/components/GuestSelector'
 import { HotelCard } from '@/components/HotelCard'
 import { FiltersPanel } from '@/components/FiltersPanel'
+
+// Ordered list of Park Prodigy recommended hotels for All Orlando
+const RECOMMENDED_ORDER = [
+  'drury plaza hotel orlando',
+  'holiday inn orlando disney springs',
+  'hyatt regency grand cypress',
+  'caribe royale orlando',
+  'ette hotel',
+  'endless summer',
+  'aventura hotel',
+  'royal pacific',
+]
 
 function inDays(n: number) {
   const d = new Date()
@@ -126,7 +139,6 @@ function DateRangeField({ checkin, checkout, onCheckinChange, onCheckoutChange }
         </span>
       </div>
 
-      {/* Desktop dropdown */}
       {open && !isMobile && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 9999,
@@ -137,7 +149,6 @@ function DateRangeField({ checkin, checkout, onCheckinChange, onCheckoutChange }
         </div>
       )}
 
-      {/* Mobile bottom sheet */}
       {open && isMobile && (
         <div className="mobile-sheet-overlay" onClick={() => setOpen(false)}>
           <div className="mobile-sheet" onClick={e => e.stopPropagation()}>
@@ -173,6 +184,7 @@ export default function SearchPage() {
   const [filters, setFilters] = useState<SecondaryFilters>({ ...DEFAULT_FILTERS, amenities: new Set() })
   const [sort, setSort] = useState('price')
   const [searchDirty, setSearchDirty] = useState(false)
+  const [showMore, setShowMore] = useState(false)
 
   const doSearch = useCallback(async () => {
     if (!checkin || !checkout) { setSearchError('Please select your dates.'); return }
@@ -184,12 +196,13 @@ export default function SearchPage() {
     setRateMap({})
     setFilters({ maxPrice: 1000, stars: 'all', refundableOnly: false, amenities: new Set() })
     setSort('price')
+    setShowMore(false)
 
     const destConfig = DESTINATIONS[dest]
     try {
       const responses = await Promise.all(
         destConfig.cities.map(c =>
-          fetch(`/api/hotels/search?countryCode=${destConfig.country}&cityName=${encodeURIComponent(c)}&limit=20`)
+          fetch(`/api/hotels/search?countryCode=${destConfig.country}&cityName=${encodeURIComponent(c)}&limit=100`)
             .then(r => r.json())
         )
       )
@@ -210,7 +223,7 @@ export default function SearchPage() {
         return occ
       })
 
-      const allIds = filtered.map((h: unknown) => (h as {id: string}).id)
+      const allIds = filtered.map((h: unknown) => (h as { id: string }).id)
       const BATCH = 10
       const batches: string[][] = []
       for (let i = 0; i < allIds.length; i += BATCH) batches.push(allIds.slice(i, i + BATCH))
@@ -226,12 +239,12 @@ export default function SearchPage() {
             .then(rd => {
               setRateMap(prev => {
                 const next = { ...prev }
-                ;(rd.data ?? []).forEach((hr: {hotelId: string; roomTypes?: unknown[]}) => {
+                ;(rd.data ?? []).forEach((hr: { hotelId: string; roomTypes?: unknown[] }) => {
                   const rt = hr.roomTypes ?? []
                   if (rt.length) {
                     const cheap = rt.reduce((a: unknown, b: unknown) => {
-                      const aa = a as {offerRetailRate?: {amount?: number}}
-                      const bb = b as {offerRetailRate?: {amount?: number}}
+                      const aa = a as { offerRetailRate?: { amount?: number } }
+                      const bb = b as { offerRetailRate?: { amount?: number } }
                       return (aa.offerRetailRate?.amount ?? 9999) < (bb.offerRetailRate?.amount ?? 9999) ? a : b
                     })
                     next[hr.hotelId] = { ...(cheap as object), allRooms: rt }
@@ -250,11 +263,33 @@ export default function SearchPage() {
     setLoading(false)
   }, [checkin, checkout, dest, filterType, guests])
 
-  useEffect(() => { doSearch() }, []) // auto-search on mount with default dates
+  useEffect(() => { doSearch() }, []) // auto-search on mount
 
   const n = getNights(checkin, checkout)
   const sorted = getSortedHotels(hotels, rateMap, sort)
   const visible = applySecondaryFilters(sorted, rateMap, n, filters)
+
+  // ── All Orlando: split into recommended (pinned) + rest ─────────────────────
+  const isAllOrlando = dest === 'orlando' && filterType === 'all'
+  const isUniversalFilter = dest === 'orlando' && filterType === 'universal-onsite'
+
+  let recommendedHotels: unknown[] = []
+  let remainingHotels: unknown[] = []
+
+  if (isAllOrlando) {
+    // Sort recommended hotels by their pinned order
+    const rec: [number, unknown][] = []
+    const rest: unknown[] = []
+    visible.forEach(h => {
+      const hotel = h as { name?: string }
+      const idx = getRecommendedIndex(hotel.name ?? '')
+      if (idx >= 0) rec.push([idx, h])
+      else rest.push(h)
+    })
+    rec.sort((a, b) => a[0] - b[0])
+    recommendedHotels = rec.map(r => r[1])
+    remainingHotels = rest
+  }
 
   function handleSelectHotel(hotelId: string) {
     const url = `/hotel/${hotelId}?checkin=${checkin}&checkout=${checkout}&adults=${guests.adults}&rooms=${guests.rooms}${guests.childAges.length ? `&childAges=${guests.childAges.join(',')}` : ''}`
@@ -266,7 +301,6 @@ export default function SearchPage() {
     setSearchDirty(true)
   }
 
-  // Re-trigger search when type filter changes and results already exist
   useEffect(() => {
     if (searched) doSearch()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -290,7 +324,6 @@ export default function SearchPage() {
           <div className="search-bar" id="search-form">
             <input type="hidden" id="city" value={DESTINATIONS[dest].cities[0]} />
 
-            {/* Destination */}
             <div className="search-bar-field search-bar-field--dest">
               <div className="search-bar-val-row">
                 <svg className="field-icon" width="12" height="15" viewBox="0 0 12 15" fill="none">
@@ -308,13 +341,9 @@ export default function SearchPage() {
               </div>
             </div>
 
-            {/* Dates */}
             <DateRangeField checkin={checkin} checkout={checkout} onCheckinChange={(v) => { setCheckin(v); setSearchDirty(true) }} onCheckoutChange={(v) => { setCheckout(v); setSearchDirty(true) }} />
-
-            {/* Guests */}
             <GuestSelector value={guests} onChange={(v) => { setGuests(v); setSearchDirty(true) }} />
 
-            {/* Search button */}
             <button className="search-bar-btn" onClick={doSearch} disabled={loading}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -372,23 +401,103 @@ export default function SearchPage() {
                 Reset Filters
               </button>
             </div>
+          ) : isAllOrlando ? (
+            <>
+              {/* ── Park Prodigy Recommended ────────────────────────────── */}
+              {recommendedHotels.length > 0 && (
+                <div className="recommended-section">
+                  <div className="recommended-header">
+                    <div className="recommended-badge">⭐ The Park Prodigy Recommended</div>
+                    <p className="recommended-sub">Hand-picked by our team of theme park experts</p>
+                  </div>
+                  <div className="hotel-list">
+                    {recommendedHotels.map((h: unknown) => {
+                      const hotel = h as { id: string }
+                      return (
+                        <HotelCard
+                          key={hotel.id}
+                          hotel={h}
+                          rate={rateMap[hotel.id]}
+                          checkin={checkin}
+                          checkout={checkout}
+                          onClick={() => handleSelectHotel(hotel.id)}
+                          pricesHidden={searchDirty}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Show More Deals ─────────────────────────────────────── */}
+              {remainingHotels.length > 0 && (
+                <>
+                  {!showMore ? (
+                    <div className="show-more-wrap">
+                      <button className="show-more-btn" onClick={() => setShowMore(true)}>
+                        Show More Deals ({remainingHotels.length} more hotels) ↓
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="hotel-list" style={{ marginTop: 16 }}>
+                      {remainingHotels.map((h: unknown) => {
+                        const hotel = h as { id: string }
+                        return (
+                          <HotelCard
+                            key={hotel.id}
+                            hotel={h}
+                            rate={rateMap[hotel.id]}
+                            checkin={checkin}
+                            checkout={checkout}
+                            onClick={() => handleSelectHotel(hotel.id)}
+                            pricesHidden={searchDirty}
+                          />
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
           ) : (
-            <div className="hotel-list">
-              {visible.map((h: unknown) => {
-                const hotel = h as { id: string }
-                return (
-                  <HotelCard
-                    key={hotel.id}
-                    hotel={h}
-                    rate={rateMap[hotel.id]}
-                    checkin={checkin}
-                    checkout={checkout}
-                    onClick={() => handleSelectHotel(hotel.id)}
-                    pricesHidden={searchDirty}
-                  />
-                )
-              })}
-            </div>
+            <>
+              <div className="hotel-list">
+                {visible.map((h: unknown) => {
+                  const hotel = h as { id: string }
+                  return (
+                    <HotelCard
+                      key={hotel.id}
+                      hotel={h}
+                      rate={rateMap[hotel.id]}
+                      checkin={checkin}
+                      checkout={checkout}
+                      onClick={() => handleSelectHotel(hotel.id)}
+                      pricesHidden={searchDirty}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* ── Universal Hotels CTA ────────────────────────────────── */}
+              {isUniversalFilter && !loading && (
+                <div className="universal-cta">
+                  <div className="universal-cta-inner">
+                    <div className="universal-cta-icon">🏨</div>
+                    <div className="universal-cta-text">
+                      <strong>Don&apos;t see the hotel you&apos;re looking for?</strong>
+                      <span>Shop more Universal Orlando hotel deals — including exclusive vacation packages with tickets.</span>
+                    </div>
+                    <a
+                      href="https://theparkprodigy.com/discount-universal-orlando-vacation-packages/"
+                      className="universal-cta-btn"
+                      target="_parent"
+                    >
+                      View Package Deals →
+                    </a>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

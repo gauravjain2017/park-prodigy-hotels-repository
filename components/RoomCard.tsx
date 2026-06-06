@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { fmtPrice, getTaxInfo, getRoomName, getRoomPhoto, getRoomBeds, getRoomDescription, getRoomAmenities } from '@/lib/hotels'
+import { fmtPrice, getTaxInfo, getRoomName, getRoomPhoto, getRoomBeds, getRoomDescription, getRoomAmenities, isUniversalOnsite, hasNoResortFee, getNights } from '@/lib/hotels'
 import { CancellationPolicy } from './CancellationPolicy'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +32,7 @@ export function RoomCard({ room, index, hotelData, numNights, isOnsite }: {
   const hotelImages = (hotelData as unknown as { hotelImages?: unknown[] }).hotelImages as unknown[] ?? []
 
   const rawTotal = room.offerRetailRate?.amount
-  const total = rawTotal ? (isOnsite ? Math.round(rawTotal * 0.96 * 100) / 100 : rawTotal) : null
+  const total = rawTotal ? (isOnsite ? Math.round(rawTotal * 0.92 * 100) / 100 : rawTotal) : null
   const perNight = total && numNights ? Math.round(total / numNights) : null
 
   const photo = getRoomPhoto(room, detailRooms as never[], hotelImages as never[])
@@ -41,13 +41,57 @@ export function RoomCard({ room, index, hotelData, numNights, isOnsite }: {
   const desc = getRoomDescription(room, detailRooms as never[])
   const amenities = getRoomAmenities(room, detailRooms as never[])
   const taxInfo = getTaxInfo(room)
+  const noresortfee = hasNoResortFee(hotelData.hotelName)
+
+  // Check if check-in is more than 45 days away
+  const today = new Date()
+  const checkinDate = new Date(hotelData.checkin)
+  const daysUntilCheckin = Math.round((checkinDate.getTime() - today.getTime()) / 86400000)
+  const showPackagePromo = isOnsite && daysUntilCheckin > 45
+
+  // Tax note logic for room card
+  function getTaxLabel(): { text: string; className: string } {
+    if (isOnsite || noresortfee) {
+      return { text: noresortfee ? '✓ No resort fees' : '✓ All taxes & fees included', className: 'tax-included' }
+    }
+    if (taxInfo.extraFees.length > 0) {
+      const extraPerNight = numNights > 0 ? Math.round(taxInfo.extraTotal / numNights) : taxInfo.extraTotal
+      return {
+        text: `+ ${fmtPrice(extraPerNight)}/night resort fee due at property`,
+        className: 'tax-extra'
+      }
+    }
+    if (taxInfo.known && taxInfo.allIncluded) {
+      return { text: '✓ Taxes included · resort fees may apply', className: 'tax-included' }
+    }
+    // null — unknown
+    return { text: 'Resort fees may apply', className: 'tax-unknown' }
+  }
+
+  const taxLabel = getTaxLabel()
+
+  // Right-side price tax note (shorter version)
+  function getPriceTaxNote(): { text: string; className: string } {
+    if (isOnsite || noresortfee) {
+      return { text: noresortfee ? '✓ No resort fees' : '✓ taxes incl.', className: 'tax-note-inline' }
+    }
+    if (taxInfo.extraFees.length > 0) {
+      const extraPerNight = numNights > 0 ? Math.round(taxInfo.extraTotal / numNights) : taxInfo.extraTotal
+      return { text: `+ ${fmtPrice(extraPerNight)}/night at property`, className: 'tax-note-inline--gold' }
+    }
+    if (taxInfo.known && taxInfo.allIncluded) {
+      return { text: '✓ taxes incl. · resort fees may apply', className: 'tax-note-inline' }
+    }
+    return { text: 'Resort fees may apply', className: 'tax-note-inline--muted' }
+  }
+
+  const priceTaxNote = getPriceTaxNote()
 
   function handleSelect() {
     if (!room.offerId) return
     setLoading(true)
     setError('')
 
-    // Listen for the cart response from the WordPress parent page
     const handler = (e: MessageEvent) => {
       if (!e.data || e.data.type !== 'liteapi_cart_response') return
       window.removeEventListener('message', handler)
@@ -55,11 +99,9 @@ export function RoomCard({ room, index, hotelData, numNights, isOnsite }: {
       if (!e.data.success) {
         setError(e.data.message || 'Failed to add room to cart.')
       }
-      // On success the parent page redirects — nothing more to do here
     }
     window.addEventListener('message', handler)
 
-    // Safety timeout in case parent never responds
     setTimeout(() => {
       window.removeEventListener('message', handler)
       setLoading(false)
@@ -106,17 +148,20 @@ export function RoomCard({ room, index, hotelData, numNights, isOnsite }: {
         {amenities.length > 0 && <div className="room-list-amenities">{amenities.join(' · ')}</div>}
         <div className="room-list-policy">
           <CancellationPolicy rate={room} />
-          {isOnsite ? (
-            <div className="tax-included">✓ All taxes &amp; fees included</div>
-          ) : taxInfo.allIncluded ? (
-            <div className="tax-included">✓ All taxes &amp; fees included</div>
-          ) : (
-            <>
-              <div className="tax-extra">+ {fmtPrice(taxInfo.extraTotal)} due at property</div>
-              <div className="tax-extra-desc">{taxInfo.extraFees.map((f: {description?: string}) => f.description ?? 'Fee').join(', ')}</div>
-            </>
+          <div className={taxLabel.className}>{taxLabel.text}</div>
+          {taxInfo.extraFees.length > 0 && (
+            <div className="tax-extra-desc">
+              {taxInfo.extraFees.map((f: { description?: string }) => f.description ?? 'Fee').join(', ')}
+            </div>
           )}
         </div>
+
+        {/* Package promo — Universal onsite + check-in > 45 days away */}
+        {showPackagePromo && (
+          <div className="room-package-promo">
+            📦 Bundle this room with tickets and book a package for as little as <strong>$50 per person down</strong>
+          </div>
+        )}
       </div>
 
       <div className="room-list-price">
@@ -125,12 +170,7 @@ export function RoomCard({ room, index, hotelData, numNights, isOnsite }: {
             <div className="room-list-price-night">{fmtPrice(perNight)}<span>/night</span></div>
             <div className="room-list-price-total">{fmtPrice(total)} total</div>
             <div className="room-list-price-tax">
-              {isOnsite
-                ? <span className="tax-note-inline">✓ taxes incl.</span>
-                : taxInfo.allIncluded
-                  ? <span className="tax-note-inline">✓ taxes incl. · resort fees may apply</span>
-                  : <span className="tax-note-inline--gold">+ {fmtPrice(taxInfo.extraTotal)} due at property</span>
-              }
+              <span className={priceTaxNote.className}>{priceTaxNote.text}</span>
             </div>
           </>
         ) : (

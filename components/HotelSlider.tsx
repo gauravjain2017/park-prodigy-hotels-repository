@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { getAdjustedTotal, getTaxInfo, isUniversalOnsite, getNights, fmtPrice } from '@/lib/hotels'
+import { getAdjustedTotal, getTaxInfo, getDiscountPct, isUniversalOnsite, hasNoResortFee, getNights, fmtPrice } from '@/lib/hotels'
 
 const NAV_PREV = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -37,6 +37,8 @@ function SlideCard({ hotel, rate, numNights, onClick, pricesHidden }: { hotel: a
   const perNight = total && numNights ? Math.round(total / numNights) : null
   const hasRate = !!total
   const onsite = isUniversalOnsite(name)
+  const noresortfee = hasNoResortFee(name)
+  const discountPct = rate ? getDiscountPct(rate) : null
 
   const cancelPolicy = rate?.rates?.[0]?.cancellationPolicies
     ?? rate?.rates?.[0]?.cancelPolicy
@@ -48,13 +50,18 @@ function SlideCard({ hotel, rate, numNights, onClick, pricesHidden }: { hotel: a
   if (hasRate) {
     if (onsite) {
       taxNote = <div className="slide-tax-note">✓ taxes incl.</div>
+    } else if (noresortfee) {
+      taxNote = <div className="slide-tax-note">✓ No resort fees</div>
     } else if (rate) {
       const ti = getTaxInfo(rate)
-      if (ti.allIncluded) {
+      if (ti.extraFees.length > 0) {
+        const extraPerNight = numNights > 0 ? Math.round(ti.extraTotal / numNights) : ti.extraTotal
+        taxNote = <div className="slide-tax-extra">+ {fmtPrice(extraPerNight)}/night resort fee at property</div>
+      } else if (ti.known && ti.allIncluded) {
         taxNote = <div className="slide-tax-note">✓ taxes incl. · resort fees may apply</div>
-      } else if (ti.extraFees.length) {
-        const extra = ti.extraFees.reduce((s, f) => s + (f.amount ?? 0), 0)
-        taxNote = <div className="slide-tax-extra">+ {fmtPrice(extra)} at property</div>
+      } else {
+        // null — unknown
+        taxNote = <div className="slide-tax-unknown">Resort fees may apply</div>
       }
     }
   }
@@ -66,6 +73,9 @@ function SlideCard({ hotel, rate, numNights, onClick, pricesHidden }: { hotel: a
           ? <img className="slide-img" src={photo} alt={name} loading="lazy" />
           : <div className="slide-img-placeholder">🏨</div>
         }
+        {discountPct && discountPct > 0 && !pricesHidden && (
+          <div className="slide-discount-badge">{discountPct}% off</div>
+        )}
       </div>
       <div className="slide-body">
         <div className="slide-meta">

@@ -1,4 +1,6 @@
-import { getAdjustedTotal, getTaxInfo, getCancelPolicy, fmtPrice, getNights } from '@/lib/hotels'
+'use client'
+
+import { getAdjustedTotal, getTaxInfo, getCancelPolicy, getDiscountPct, hasNoResortFee, isUniversalOnsite, fmtPrice, getNights } from '@/lib/hotels'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function HotelCard({ hotel, rate, checkin, checkout, onClick, pricesHidden }: {
@@ -26,15 +28,33 @@ export function HotelCard({ hotel, rate, checkin, checkout, onClick, pricesHidde
   const cancelPolicy = getCancelPolicy(rate)
   const isRefundable = cancelPolicy?.refundableTag === 'RFN'
   const taxInfo = rate ? getTaxInfo(rate) : null
+  const discountPct = rate ? getDiscountPct(rate) : null
+  const onsite = isUniversalOnsite(hotel.name ?? '')
+  const noresortfee = hasNoResortFee(hotel.name ?? '')
 
+  // Tax note logic:
+  // 1. Universal onsite → always "✓ taxes incl."
+  // 2. Drury Plaza → "✓ No resort fees"
+  // 3. Known extra fees → "+ $X due at property"
+  // 4. Known all included → "✓ taxes incl."
+  // 5. Unknown (null) → "resort fees may apply"
   let taxNote = ''
-  if (rate) {
-    if (total && hotel.name && hotel.name.toLowerCase().match(/portofino bay|hard rock hotel|royal pacific|sapphire falls|helios grand|aventura hotel|stella nova|terra luna|cabana bay|endless summer/)) {
+  let taxNoteClass = 'price-tax-note'
+  if (rate && hasRate) {
+    if (onsite) {
       taxNote = '✓ taxes incl.'
-    } else if (taxInfo?.allIncluded) {
+    } else if (noresortfee) {
+      taxNote = '✓ No resort fees'
+    } else if (taxInfo && taxInfo.extraFees.length > 0) {
+      const extraPerNight = n > 0 ? Math.round(taxInfo.extraTotal / n) : taxInfo.extraTotal
+      taxNote = `+ ${fmtPrice(extraPerNight)}/night resort fee due at property`
+      taxNoteClass = 'price-tax-extra'
+    } else if (taxInfo?.known && taxInfo.allIncluded) {
       taxNote = '✓ taxes incl. · resort fees may apply'
-    } else if (taxInfo?.extraTotal) {
-      taxNote = `+ ${fmtPrice(taxInfo.extraTotal)} due at property`
+    } else {
+      // null returned — unknown
+      taxNote = 'Resort fees may apply'
+      taxNoteClass = 'price-tax-unknown'
     }
   }
 
@@ -76,12 +96,22 @@ export function HotelCard({ hotel, rate, checkin, checkout, onClick, pricesHidde
               </div>
             ) : hasRate ? (
               <>
+                {discountPct && discountPct > 0 && (
+                  <div className="discount-badge">{discountPct}% off</div>
+                )}
                 <div className="price-per-night">{fmtPrice(perNight)} &nbsp;nightly</div>
                 <div className="price-total">{fmtPrice(total)} &nbsp;total</div>
-                {taxNote && <div className={taxNote.startsWith('+') ? 'price-tax-extra' : 'price-tax-note'}>{taxNote}</div>}
+                {taxNote && <div className={taxNoteClass}>{taxNote}</div>}
               </>
             ) : (
-              <div className="no-rates-text">{rate === undefined ? 'Loading...' : 'No rates'}</div>
+              <div className="no-rates-text">
+                No rates available.{' '}
+                {isUniversalOnsite(hotel.name ?? '') ? (
+                  <a href="https://theparkprodigy.com/discount-universal-orlando-vacation-packages/" target="_blank" rel="noreferrer" style={{ color: '#2872cc', fontWeight: 600 }}>
+                    Check our vacation package page →
+                  </a>
+                ) : null}
+              </div>
             )}
           </div>
         </div>

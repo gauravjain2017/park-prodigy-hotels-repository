@@ -30,16 +30,19 @@ export const DESTINATIONS: Record<string, {
     label: 'Los Angeles',
     cities: ['Los Angeles'],
     country: 'US',
-    filters: [],
+    filters: [
+      { id: 'all', label: 'All Los Angeles' },
+      { id: 'universal-hollywood', label: 'Universal Hollywood Hotels' },
+    ],
   },
 }
 
 // ── Hotel name keyword filters ────────────────────────────────────────────────
 
 export const UNIVERSAL_ONSITE_KEYWORDS = [
-	  'portofino bay', 'hard rock hotel', 'royal pacific', 'sapphire falls',
-	  'helios grand', 'aventura hotel', 'stella nova', 'terra luna',
-	  'cabana bay', 'endless summer surfside', 'endless summer dockside', 'endless summer',
+  'portofino bay', 'hard rock hotel', 'royal pacific', 'sapphire falls',
+  'helios grand', 'aventura hotel', 'stella nova', 'terra luna',
+  'cabana bay', 'endless summer surfside', 'endless summer dockside', 'endless summer',
 ]
 
 export const HOTEL_FILTERS: Record<string, string[]> = {
@@ -85,6 +88,38 @@ export const HOTEL_FILTERS: Record<string, string[]> = {
     'springhill suites anaheim', 'staybridge anaheim',
     'lemon tree inn', 'anabella hotel', 'katella inn',
   ],
+  // ── Universal Hollywood Good Neighbor Hotels (confirmed in LiteAPI) ──────
+  'universal-hollywood': [
+    'hilton los angeles universal', 'hilton universal city',
+    'loews hollywood hotel',
+    'the garland', 'garland hotel',
+  ],
+}
+
+// ── Park Prodigy Recommended Hotels (All Orlando — shown first in order) ──────
+export const ORLANDO_RECOMMENDED_KEYWORDS = [
+  'drury plaza hotel orlando',
+  'holiday inn orlando disney springs',
+  'hyatt regency grand cypress',
+  'caribe royale orlando',
+  'ette hotel',
+  'endless summer',
+  'aventura hotel',
+  'royal pacific',
+]
+
+// Returns the pinned index (0-based) if hotel is recommended, or -1
+export function getRecommendedIndex(hotelName: string): number {
+  const name = hotelName.toLowerCase()
+  return ORLANDO_RECOMMENDED_KEYWORDS.findIndex(k => name.includes(k))
+}
+
+// ── Hotels with known no resort fees (hardcoded) ─────────────────────────────
+const NO_RESORT_FEE_KEYWORDS = ['drury plaza']
+
+export function hasNoResortFee(hotelName: string): boolean {
+  const name = (hotelName ?? '').toLowerCase()
+  return NO_RESORT_FEE_KEYWORDS.some(k => name.includes(k))
 }
 
 // ── Business logic ────────────────────────────────────────────────────────────
@@ -98,7 +133,17 @@ export function isUniversalOnsite(hotelName: string): boolean {
 export function getAdjustedTotal(hotel: { name?: string }, rate: any): number | null {
   const raw = rate?.offerRetailRate?.amount
   if (!raw) return null
-  return isUniversalOnsite(hotel.name ?? '') ? Math.round(raw * 0.96 * 100) / 100 : raw
+  // 8% discount for Universal onsite hotels (to match/beat direct pricing)
+  return isUniversalOnsite(hotel.name ?? '') ? Math.round(raw * 0.92 * 100) / 100 : raw
+}
+
+// Returns discount percentage if reference rate is available and higher
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getDiscountPct(rate: any): number | null {
+  const retail = rate?.offerRetailRate?.amount
+  const suggested = rate?.suggestedSellingPrice?.amount
+  if (!retail || !suggested || suggested <= retail) return null
+  return Math.round((1 - retail / suggested) * 100)
 }
 
 export function getNights(checkin: string, checkout: string): number {
@@ -112,6 +157,7 @@ export function fmtPrice(n: number | null | undefined): string {
 
 export type TaxInfo = {
   allIncluded: boolean
+  known: boolean // false when taxesAndFees is null (unknown)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extraFees: any[]
   extraTotal: number
@@ -119,12 +165,24 @@ export type TaxInfo = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getTaxInfo(rate: any): TaxInfo {
-  const fees = rate?.rates?.[0]?.taxesAndFees ?? rate?.taxesAndFees
-  if (fees == null || !Array.isArray(fees) || fees.length === 0) return { allIncluded: true, extraFees: [], extraTotal: 0 }
+  const fees = rate?.rates?.[0]?.retailRate?.taxesAndFees
+    ?? rate?.rates?.[0]?.taxesAndFees
+    ?? rate?.taxesAndFees
+
+  // null/undefined = LiteAPI didn't return fee data — unknown, NOT confirmed included
+  if (fees === null || fees === undefined) {
+    return { allIncluded: false, known: false, extraFees: [], extraTotal: 0 }
+  }
+
+  // Empty array = confirmed all included
+  if (!Array.isArray(fees) || fees.length === 0) {
+    return { allIncluded: true, known: true, extraFees: [], extraTotal: 0 }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const extraFees = fees.filter((f: any) => f.included === false && f.amount > 0)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { allIncluded: extraFees.length === 0, extraFees, extraTotal: extraFees.reduce((s: number, f: any) => s + f.amount, 0) }
+  const extraTotal = extraFees.reduce((s: number, f: { amount?: number }) => s + (f.amount ?? 0), 0)
+  return { allIncluded: extraFees.length === 0, known: true, extraFees, extraTotal }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -235,7 +293,7 @@ export function getSortedHotels(
   return [...sorted, ...noR]
 }
 
-// ── Room detail helpers (ported from hotels-view-section.php) ─────────────────
+// ── Room detail helpers ───────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function findRoomDetail(rate: any, detailRooms: any[]): any | null {
