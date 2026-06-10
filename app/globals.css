@@ -691,8 +691,8 @@ input:focus,select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,4
 .fp-type-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 10px;
+  padding: 14px 16px;
   border-radius: 10px;
   border: 1.5px solid #dde0e8;
   background: #fff;
@@ -700,6 +700,7 @@ input:focus,select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,4
   transition: all .18s;
   text-align: left;
   min-width: 0;
+  flex: 1;
 }
 .fp-type-pill:hover {
   border-color: #2872cc;
@@ -729,13 +730,13 @@ input:focus,select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,4
   gap: 1px;
 }
 .fp-type-pill-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
 }
 .fp-type-pill-desc {
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 400;
   opacity: .75;
   line-height: 1.2;

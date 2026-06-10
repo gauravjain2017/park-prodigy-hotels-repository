@@ -332,9 +332,12 @@ export default function SearchPage() {
     router.push(url)
   }
 
+  const INITIAL_SHOW = 18
+
   function handleTypeFilterChange(id: string) {
     setFilterType(id)
     setSearchDirty(true)
+    setShowMore(false)
   }
 
   useEffect(() => {
@@ -500,7 +503,7 @@ export default function SearchPage() {
             <>
 
               <div className="hotel-list">
-                {visible.map((h: unknown) => {
+                {(showMore ? visible : visible.slice(0, INITIAL_SHOW)).map((h: unknown) => {
                   const hotel = h as { id: string }
                   return (
                     <HotelCard
@@ -515,6 +518,14 @@ export default function SearchPage() {
                   )
                 })}
               </div>
+
+              {!showMore && visible.length > INITIAL_SHOW && (
+                <div className="show-more-wrap">
+                  <button className="show-more-btn" onClick={() => setShowMore(true)}>
+                    Show More Deals ({visible.length - INITIAL_SHOW} more hotels) ↓
+                  </button>
+                </div>
+              )}
 
               {/* ── Universal Hotels CTA ────────────────────────────────── */}
               {isUniversalFilter && !loading && (
