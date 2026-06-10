@@ -498,37 +498,6 @@ export default function SearchPage() {
             </>
           ) : (
             <>
-              {isDisneyFilter && !loading && (
-                <div className="disney-neighbor-banner">
-                  <div className="disney-neighbor-banner-inner">
-                    <div className="disney-neighbor-banner-icon">✨</div>
-                    <div>
-                      <div className="disney-neighbor-banner-title">Walt Disney World Good Neighbor Hotels</div>
-                      <div className="disney-neighbor-banner-text">
-                        <ul className="disney-neighbor-banner-list">
-                          <li>Offer standard rooms, suites and villa-style accommodations</li>
-                          <li>Meet quality and service standards set by Walt Disney World Resort</li>
-                          <li>Are ready to assist with Walt Disney World vacation planning and tickets at the Guest Services desk</li>
-                          <li>Provide Guests with information about Walt Disney World Resort</li>
-                          <li>Are comfortable, convenient and close to the Disney parks</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {isUniversalPartnerFilter && !loading && (
-                <div className="universal-partner-banner">
-                  <div className="universal-partner-banner-inner">
-                    <div className="universal-partner-banner-icon">🏨</div>
-                    <div>
-                      <div className="universal-partner-banner-title">A Variety of Hotel Options Minutes Away</div>
-                      <div className="universal-partner-banner-text">Chosen based on quality, reputation and proximity to Universal Orlando, the Universal Partner Hotels are each located within minutes of Universal Orlando. Select any hotel for your vacation package available through Universal Parks &amp; Resorts Vacations™.</div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="hotel-list">
                 {visible.map((h: unknown) => {
