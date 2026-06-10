@@ -12,8 +12,32 @@ const AMENITY_DEFS = [
   { id: 'kitchen', l: 'Kitchen', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg> },
 ]
 
+// Icons + descriptions for each filter type
+const TYPE_FILTER_META: Record<string, { icon: React.ReactNode; desc: string }> = {
+  'all': {
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
+    desc: 'All hotels',
+  },
+  'universal-onsite': {
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+    desc: 'On-site perks',
+  },
+  'universal-partner': {
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    desc: 'Near Universal',
+  },
+  'disney-neighbor': {
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    desc: 'Disney area',
+  },
+  'universal-hollywood': {
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,
+    desc: 'Hollywood',
+  },
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort, filters, checkin, checkout, onFilterChange, onSortChange, onTypeFilterChange }: {
+export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort, filters, checkin, checkout, onFilterChange, onSortChange, onTypeFilterChange, onHotelSearch }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   hotels: any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,9 +51,11 @@ export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort
   onFilterChange: (f: SecondaryFilters) => void
   onSortChange: (s: string) => void
   onTypeFilterChange: (id: string) => void
+  onHotelSearch?: (q: string) => void
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileFilters, setMobileFilters] = useState<SecondaryFilters>({ ...filters, amenities: new Set(filters.amenities) })
+  const [searchQuery, setSearchQuery] = useState('')
 
   const n = getNights(checkin, checkout)
   const destConfig = DESTINATIONS[dest]
@@ -74,6 +100,11 @@ export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort
     setMobileFilters({ maxPrice: 1000, stars: 'all', refundableOnly: false, amenities: new Set() })
   }
 
+  function handleSearch(q: string) {
+    setSearchQuery(q)
+    onHotelSearch?.(q)
+  }
+
   const sliderPct = Math.round(((filters.maxPrice - 50) / (1000 - 50)) * 100)
   const sliderLabel = filters.maxPrice >= 1000 ? 'Any price' : `Up to $${filters.maxPrice}`
 
@@ -84,26 +115,58 @@ export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort
 
   return (
     <>
-      {/* ── Desktop filter card (hidden on mobile via CSS) ── */}
+      {/* ── Desktop filter card ── */}
       <div className="fp-card">
-        <div className="fp-row fp-row--top">
-          {destConfig.filters.length > 0 && (
-            <>
-              <div className="fp-group">
-                <span className="fp-label">TYPE</span>
-                <div className="fp-pills">
-                  {destConfig.filters.map(f => (
-                    <button
-                      key={f.id}
-                      className={`fp-pill${currentFilter === f.id ? ' fp-pill--active' : ''}`}
-                      onClick={() => onTypeFilterChange(f.id)}
-                    >{f.label}</button>
-                  ))}
-                </div>
-              </div>
-              <div className="fp-vsep" />
-            </>
-          )}
+
+        {/* TYPE filters with icons */}
+        {destConfig.filters.length > 0 && (
+          <div className="fp-row fp-row--type">
+            <span className="fp-label" style={{ marginRight: 10 }}>TYPE</span>
+            <div className="fp-type-pills">
+              {destConfig.filters.map(f => {
+                const meta = TYPE_FILTER_META[f.id]
+                const active = currentFilter === f.id
+                return (
+                  <button
+                    key={f.id}
+                    className={`fp-type-pill${active ? ' fp-type-pill--active' : ''}`}
+                    onClick={() => onTypeFilterChange(f.id)}
+                  >
+                    <span className="fp-type-pill-icon">{meta?.icon}</span>
+                    <span className="fp-type-pill-text">
+                      <span className="fp-type-pill-label">{f.label}</span>
+                      {meta?.desc && <span className="fp-type-pill-desc">{meta.desc}</span>}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Hotel search + stars + sort */}
+        <div className="fp-row fp-row--top" style={{ borderTop: destConfig.filters.length > 0 ? '1px solid #edeae3' : 'none' }}>
+          {/* Hotel name search */}
+          <div className="fp-group fp-group--search">
+            <div className="fp-search-wrap">
+              <svg className="fp-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a96aa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                type="text"
+                className="fp-search-input"
+                placeholder="Search by hotel name..."
+                value={searchQuery}
+                onChange={e => handleSearch(e.target.value)}
+              />
+              {searchQuery && (
+                <button className="fp-search-clear" onClick={() => handleSearch('')}>✕</button>
+              )}
+            </div>
+          </div>
+
+          <div className="fp-vsep" />
+
           <div className="fp-group">
             <span className="fp-label">STARS</span>
             <div className="fp-pills">
@@ -174,7 +237,7 @@ export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort
         </div>
       </div>
 
-      {/* ── Mobile filter bar (visible only on ≤768px) ── */}
+      {/* ── Mobile filter bar ── */}
       <div className="mobile-filter-bar">
         {!mobileOpen ? (
           <div className="mfb-action-row">
@@ -213,6 +276,25 @@ export function FiltersPanel({ hotels, rateMap, dest, currentFilter, currentSort
                   </div>
                 </div>
               )}
+
+              <div className="mfd-section">
+                <div className="mfd-section-title">Search by Name</div>
+                <div className="fp-search-wrap" style={{ width: '100%' }}>
+                  <svg className="fp-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a96aa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <input
+                    type="text"
+                    className="fp-search-input"
+                    placeholder="Search hotel name..."
+                    value={searchQuery}
+                    onChange={e => handleSearch(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button className="fp-search-clear" onClick={() => handleSearch('')}>✕</button>
+                  )}
+                </div>
+              </div>
 
               <div className="mfd-section">
                 <div className="mfd-section-title">Star Rating</div>

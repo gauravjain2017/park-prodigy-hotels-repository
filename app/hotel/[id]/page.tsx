@@ -10,7 +10,7 @@ import Link from 'next/link'
 
 interface PageProps {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ checkin?: string; checkout?: string; adults?: string; rooms?: string; childAges?: string }>
+  searchParams: Promise<{ checkin?: string; checkout?: string; adults?: string; rooms?: string; childAges?: string; dest?: string; filter?: string }>
 }
 
 export default async function HotelDetailPage({ params, searchParams }: PageProps) {
@@ -21,6 +21,8 @@ export default async function HotelDetailPage({ params, searchParams }: PageProp
   const adults = parseInt(sp.adults ?? '2', 10)
   const rooms = parseInt(sp.rooms ?? '1', 10)
   const childAges = sp.childAges ? sp.childAges.split(',').map(Number) : []
+  const dest = sp.dest ?? ''
+  const filter = sp.filter ?? ''
 
   if (!checkin || !checkout || !id) {
     return (
@@ -116,7 +118,9 @@ export default async function HotelDetailPage({ params, searchParams }: PageProp
     hotelImages: images,
   }
 
-  const backUrl = `/?checkin=${checkin}&checkout=${checkout}&adults=${adults}&rooms=${rooms}`
+  const destParam = dest ? `&dest=${dest}` : ''
+  const filterParam = filter ? `&filter=${filter}` : ''
+  const backUrl = `/?checkin=${checkin}&checkout=${checkout}&adults=${adults}&rooms=${rooms}${destParam}${filterParam}`
 
   return (
     <div className="detail-page">

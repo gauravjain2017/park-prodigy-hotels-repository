@@ -79,6 +79,7 @@ export function GuestSelector({ value, onChange }: { value: GuestConfig; onChang
 
   return (
     <div className="search-bar-field search-bar-field--guests" ref={ref}>
+      <div className="search-bar-mobile-label">Guests</div>
       <div className="search-bar-val-row" onClick={() => setOpen(o => !o)}>
         <svg className="field-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
           <circle cx="7" cy="4" r="2.5" stroke="#8899bb" strokeWidth="1.5"/>

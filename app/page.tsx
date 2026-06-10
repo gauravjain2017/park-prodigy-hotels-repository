@@ -16,13 +16,23 @@ import { FiltersPanel } from '@/components/FiltersPanel'
 // Ordered list of Park Prodigy recommended hotels for All Orlando
 const RECOMMENDED_ORDER = [
   'drury plaza hotel orlando',
+  'walt disney world dolphin',
+  'walt disney world swan reserve',
+  'walt disney world swan',
   'holiday inn orlando disney springs',
   'hyatt regency grand cypress',
   'caribe royale orlando',
   'ette hotel',
   'endless summer',
   'aventura hotel',
-  'royal pacific',
+  'loews royal pacific',
+  'doubletree by hilton at the entrance to universal',
+  'home2 suites by hilton orlando near universal',
+  'hyatt place across from universal orlando',
+  'signia by hilton orlando',
+  'jw marriott orlando bonnet creek',
+  'conrad orlando at evermore',
+  'four seasons resort orlando at walt disney world',
 ]
 
 function inDays(n: number) {
@@ -64,15 +74,30 @@ function DateRangeField({ checkin, checkout, onCheckinChange, onCheckoutChange }
   onCheckinChange: (v: string) => void; onCheckoutChange: (v: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
   }, [])
+
+  useEffect(() => {
+    if (!isMobile) {
+      function handler(e: MouseEvent) {
+        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      }
+      document.addEventListener('mousedown', handler)
+      return () => document.removeEventListener('mousedown', handler)
+    }
+  }, [isMobile])
+
+  useEffect(() => {
+    document.body.style.overflow = open && isMobile ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [open, isMobile])
 
   const label = checkin && checkout
     ? `${fmtDateDisplay(checkin)} - ${fmtDateDisplay(checkout)}`
@@ -82,27 +107,37 @@ function DateRangeField({ checkin, checkout, onCheckinChange, onCheckoutChange }
     <>
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#8a96aa', textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 6 }}>Check-in</div>
-        <input
-          type="date" value={checkin} min={inDays(1)}
-          onChange={e => {
-            const newCheckin = e.target.value
-            onCheckinChange(newCheckin)
-            if (newCheckin) {
-              const d = new Date(newCheckin)
-              d.setDate(d.getDate() + 1)
-              onCheckoutChange(d.toISOString().split('T')[0])
-            }
-          }}
-          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #dde0e8', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            type="date" value={checkin} min={inDays(1)}
+            onChange={e => {
+              const newCheckin = e.target.value
+              onCheckinChange(newCheckin)
+              if (newCheckin) {
+                const d = new Date(newCheckin)
+                d.setDate(d.getDate() + 1)
+                onCheckoutChange(d.toISOString().split('T')[0])
+              }
+            }}
+            style={{ width: '100%', padding: '8px 36px 8px 12px', border: '1.5px solid #dde0e8', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}
+          />
+          <svg style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8899bb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
       </div>
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#8a96aa', textTransform: 'uppercase', letterSpacing: '.9px', marginBottom: 6 }}>Check-out</div>
-        <input
-          type="date" value={checkout} min={checkin ? (() => { const d = new Date(checkin); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })() : inDays(2)}
-          onChange={e => onCheckoutChange(e.target.value)}
-          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #dde0e8', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            type="date" value={checkout} min={checkin ? (() => { const d = new Date(checkin); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })() : inDays(2)}
+            onChange={e => onCheckoutChange(e.target.value)}
+            style={{ width: '100%', padding: '8px 36px 8px 12px', border: '1.5px solid #dde0e8', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' }}
+          />
+          <svg style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8899bb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
       </div>
       <button
         onClick={() => setOpen(false)}
@@ -124,9 +159,28 @@ function DateRangeField({ checkin, checkout, onCheckinChange, onCheckoutChange }
         </span>
       </div>
 
-      {open && (
-        <div className="search-bar-date-dropdown" onClick={e => e.stopPropagation()}>
+      {open && !isMobile && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 9999,
+          background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,.14)',
+          padding: 20, minWidth: 280, border: '1px solid #e8e8e8',
+        }} onClick={e => e.stopPropagation()}>
           {dateInputs}
+        </div>
+      )}
+
+      {open && isMobile && (
+        <div className="mobile-sheet-overlay" onClick={() => setOpen(false)}>
+          <div className="mobile-sheet" onClick={e => e.stopPropagation()}>
+            <div className="mobile-sheet-handle-bar"><div className="mobile-sheet-handle" /></div>
+            <div className="mobile-sheet-header">
+              <span className="mobile-sheet-title">Select Dates</span>
+              <button className="mobile-sheet-close" onClick={() => setOpen(false)}>✕</button>
+            </div>
+            <div className="mobile-sheet-body">
+              {dateInputs}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -136,8 +190,17 @@ function DateRangeField({ checkin, checkout, onCheckinChange, onCheckoutChange }
 export default function SearchPage() {
   const router = useRouter()
 
-  const [dest, setDest] = useState('orlando')
-  const [filterType, setFilterType] = useState('all')
+  const [dest, setDest] = useState(() => {
+    if (typeof window === 'undefined') return 'orlando'
+    const p = new URLSearchParams(window.location.search)
+    const d = p.get('dest')
+    return (d && Object.keys(DESTINATIONS).includes(d)) ? d : 'orlando'
+  })
+  const [filterType, setFilterType] = useState(() => {
+    if (typeof window === 'undefined') return 'all'
+    const p = new URLSearchParams(window.location.search)
+    return p.get('filter') || 'all'
+  })
   const [checkin, setCheckin] = useState(inDays(30))
   const [checkout, setCheckout] = useState(inDays(35))
   const [guests, setGuests] = useState<GuestConfig>({ adults: 2, children: 0, childAges: [], rooms: 1 })
@@ -151,6 +214,7 @@ export default function SearchPage() {
   const [sort, setSort] = useState('price')
   const [searchDirty, setSearchDirty] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const [hotelSearch, setHotelSearch] = useState('')
 
   const doSearch = useCallback(async () => {
     if (!checkin || !checkout) { setSearchError('Please select your dates.'); return }
@@ -163,6 +227,7 @@ export default function SearchPage() {
     setFilters({ maxPrice: 1000, stars: 'all', refundableOnly: false, amenities: new Set() })
     setSort('price')
     setShowMore(false)
+    setHotelSearch('')
 
     const destConfig = DESTINATIONS[dest]
     try {
@@ -233,11 +298,16 @@ export default function SearchPage() {
 
   const n = getNights(checkin, checkout)
   const sorted = getSortedHotels(hotels, rateMap, sort)
-  const visible = applySecondaryFilters(sorted, rateMap, n, filters)
+  const secondaryFiltered = applySecondaryFilters(sorted, rateMap, n, filters)
+  const visible = hotelSearch.trim()
+    ? secondaryFiltered.filter(h => ((h as { name?: string }).name ?? '').toLowerCase().includes(hotelSearch.toLowerCase().trim()))
+    : secondaryFiltered
 
   // ── All Orlando: split into recommended (pinned) + rest ─────────────────────
   const isAllOrlando = dest === 'orlando' && filterType === 'all'
   const isUniversalFilter = dest === 'orlando' && filterType === 'universal-onsite'
+  const isDisneyFilter = filterType === 'disney-neighbor'
+  const isUniversalPartnerFilter = dest === 'orlando' && filterType === 'universal-partner'
 
   let recommendedHotels: unknown[] = []
   let remainingHotels: unknown[] = []
@@ -258,7 +328,7 @@ export default function SearchPage() {
   }
 
   function handleSelectHotel(hotelId: string) {
-    const url = `/hotel/${hotelId}?checkin=${checkin}&checkout=${checkout}&adults=${guests.adults}&rooms=${guests.rooms}${guests.childAges.length ? `&childAges=${guests.childAges.join(',')}` : ''}`
+    const url = `/hotel/${hotelId}?checkin=${checkin}&checkout=${checkout}&adults=${guests.adults}&rooms=${guests.rooms}${guests.childAges.length ? `&childAges=${guests.childAges.join(',')}` : ''}&dest=${dest}&filter=${filterType}`
     router.push(url)
   }
 
@@ -352,6 +422,7 @@ export default function SearchPage() {
               onFilterChange={setFilters}
               onSortChange={setSort}
               onTypeFilterChange={handleTypeFilterChange}
+              onHotelSearch={setHotelSearch}
             />
           )}
 
@@ -427,6 +498,38 @@ export default function SearchPage() {
             </>
           ) : (
             <>
+              {isDisneyFilter && !loading && (
+                <div className="disney-neighbor-banner">
+                  <div className="disney-neighbor-banner-inner">
+                    <div className="disney-neighbor-banner-icon">✨</div>
+                    <div>
+                      <div className="disney-neighbor-banner-title">Walt Disney World Good Neighbor Hotels</div>
+                      <div className="disney-neighbor-banner-text">
+                        <ul className="disney-neighbor-banner-list">
+                          <li>Offer standard rooms, suites and villa-style accommodations</li>
+                          <li>Meet quality and service standards set by Walt Disney World Resort</li>
+                          <li>Are ready to assist with Walt Disney World vacation planning and tickets at the Guest Services desk</li>
+                          <li>Provide Guests with information about Walt Disney World Resort</li>
+                          <li>Are comfortable, convenient and close to the Disney parks</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isUniversalPartnerFilter && !loading && (
+                <div className="universal-partner-banner">
+                  <div className="universal-partner-banner-inner">
+                    <div className="universal-partner-banner-icon">🏨</div>
+                    <div>
+                      <div className="universal-partner-banner-title">A Variety of Hotel Options Minutes Away</div>
+                      <div className="universal-partner-banner-text">Chosen based on quality, reputation and proximity to Universal Orlando, the Universal Partner Hotels are each located within minutes of Universal Orlando. Select any hotel for your vacation package available through Universal Parks &amp; Resorts Vacations™.</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="hotel-list">
                 {visible.map((h: unknown) => {
                   const hotel = h as { id: string }
